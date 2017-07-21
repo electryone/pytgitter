@@ -5,7 +5,7 @@ import git
 import os
 import pickle
 import logging
-import subprocess
+from commandwrapper import WrapCommand
 from logging import handlers
 from configobj import ConfigObj
 
@@ -230,14 +230,10 @@ class RunCommand(object):
         :return: None
         """
         for command in commands:
-            callable_cmd = str(command).split()
-            runner = subprocess.Popen(callable_cmd, shell=True,
-                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            output, err = runner.communicate()
-            if runner.returncode != 0:
-                out = output + err
-                self.__log_object.log_error_now(command, out)
+            command_obj = WrapCommand(command, shell=True)
+            command_obj.start()
+            command_obj.join()
+            if command_obj.returncode != 0:
+                self.__log_object.log_error_now(command, command_obj.results)
             else:
-                self.__log_object.log_output(command, output)
-
-
+                self.__log_object.log_output(command, command_obj.results)
