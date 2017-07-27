@@ -3,17 +3,12 @@
 import os
 import sys
 import gitter_library
-from time import time as _time
 
 """
 Set the static variables
 """
-DIR_NAME = "/tmp/test"
-REMOTE_URL = "https://git.blablablabla.com/repouser/test.git"
-BRANCH = "master"
 FLD_PTRN = "FOLDER:"
 PID = "/var/run/pytgitter.pid"
-LOG_FILE = "/var/log/pytgitter.log"
 
 """
 Set the static objects
@@ -21,8 +16,7 @@ Set the static objects
 PID_CLEAR_TIME = 60 * 60 * 24 * 7
 all_commands = list()
 folder_commands = list()
-LogOps = gitter_library.LogOperation(url=REMOTE_URL, branch=BRANCH, log_file=LOG_FILE)
-
+LogOps = gitter_library.LogOperation()
 
 """
 Running control
@@ -57,60 +51,60 @@ else:
     PID_OVER_WRITER()
 """
 
-"""
-Create class objects from library
-"""
-Giter = gitter_library.Giter
-ConfigParse = gitter_library.ConfigParse(dir=DIR_NAME, url=REMOTE_URL,
-                                         branch=BRANCH, log_object=LogOps)
-RunCommands = gitter_library.RunCommand(log_object=LogOps)
 
-"""
-Collecting All required data
-"""
-try:
-    file_map = ConfigParse.get_maps()
-    # Static file map
-    old_commit = Giter(dir=DIR_NAME, url=REMOTE_URL,
-                       branch=BRANCH).get_last_commit()
-    # Get old commit hash
-    changed_files = Giter(dir=DIR_NAME, url=REMOTE_URL,
-                          branch=BRANCH).pull_and_get()
-    # Changed files after fetch and pull operation
-    new_unlikely_commit = Giter(dir=DIR_NAME, url=REMOTE_URL,
-                                branch=BRANCH).get_last_commit()
-    # Get end (new or old ?) commit hash
-except Exception as e:
-    LogOps.log_error_now("Collect Operation", e)
-    sys.exit(1)
+def git_now(remote_url, branch, dir_name):
+    global Gitter, LogOps
+    gitter_library.initial_config(dir_name, remote_url, branch)
+    Giter = gitter_library.Giter
+    ConfigParse = gitter_library.ConfigParse(log_object=LogOps)
+    RunCommands = gitter_library.RunCommand(log_object=LogOps)
 
-"""
-Control and running
-"""
-if old_commit != new_unlikely_commit:
-    # if changed ?
-    LogOps.log_now("Change detected! (" + old_commit + " to " + new_unlikely_commit + ")")
-    for key, commands in file_map.iteritems():
-        # loop the static map list
-        if key == "ALL":
-            # if all command ?
-            all_commands = commands
-        elif str(key).__contains__(FLD_PTRN):
-            # if specific folder ?
-            folder_name = str(key).split(FLD_PTRN)[1]
-            for sear_item in changed_files:
-                if folder_name in sear_item:
-                    folder_commands.extend(commands)
-        else:
-            # and another rule is specific file
-            if key in changed_files:
-                # if specific file ?
-                RunCommands.run_now(commands)
-    if folder_commands.__len__() > 0:
-        # Folder command run the end of process
-        RunCommands.run_now(list(set(folder_commands)))
-    if all_commands.__len__() > 0:
-        # All command run the end of process
-        RunCommands.run_now(all_commands)
-else:
-    LogOps.log_now("No Change.. (" + old_commit + ")")
+    try:
+        file_map = ConfigParse.get_maps()
+        # Static file map
+        old_commit = Giter().get_last_commit()
+        # Get old commit hash
+        changed_files = Giter().pull_and_get()
+        # Changed files after fetch and pull operation
+        new_unlikely_commit = Giter().get_last_commit()
+        # Get end (new or old ?) commit hash
+    except Exception as e:
+        LogOps.log_error_now("Collect Operation", e)
+        sys.exit(1)
+
+    if old_commit != new_unlikely_commit:
+        # if changed ?
+        LogOps.log_now("Change detected! (" + old_commit + " to " + new_unlikely_commit + ")")
+        for key, commands in file_map.iteritems():
+            # loop the static map list
+            if key == "ALL":
+                # if all command ?
+                all_commands = commands
+            elif str(key).__contains__(FLD_PTRN):
+                # if specific folder ?
+                folder_name = str(key).split(FLD_PTRN)[1]
+                for sear_item in changed_files:
+                    if folder_name in sear_item:
+                        folder_commands.extend(commands)
+            else:
+                # and another rule is specific file
+                if key in changed_files:
+                    # if specific file ?
+                    RunCommands.run_now(commands)
+        if folder_commands.__len__() > 0:
+            # Folder command run the end of process
+            RunCommands.run_now(list(set(folder_commands)))
+        if all_commands.__len__() > 0:
+            # All command run the end of process
+            RunCommands.run_now(all_commands)
+    else:
+        LogOps.log_now("No Change.. (" + old_commit + ")")
+
+
+if __name__ == '__main__':
+    ConfigParse = gitter_library.ConfigParse(log_object=LogOps)
+    for map_dict in ConfigParse.read_map().__iter__():
+        url = map_dict["url"]
+        dir = map_dict["dir"]
+        branch = map_dict["branch"]
+        git_now(url, branch, dir)

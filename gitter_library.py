@@ -9,31 +9,41 @@ from commandwrapper import WrapCommand
 from logging import handlers
 from configobj import ConfigObj
 
-
 """
 Set the static variables and initialization
 """
 CONF_FILE = "map.cfg"
 CACHE_FILE = "cache.obj"
+LOG_FILE = "/var/log/pytgitter.log"
+BRANCH = str()
+DIR_NAME = str()
+REMOTE_URL = str()
+
+
+def initial_config(dir_name, remote_url, branch):
+    global DIR_NAME, REMOTE_URL, BRANCH
+    DIR_NAME = dir_name
+    REMOTE_URL = remote_url
+    BRANCH = branch
 
 
 class LogOperation(object):
     """
     Logger Class
     """
-    def __init__(self, url, branch, log_file):
+
+    def __init__(self):
         """
         First initialization
         :param url: Git Remote URL
         :param branch: Branch
         :param log_file: Log File defination
         """
-        self.__URL = url
-        self.__BRANCH = branch
+        global LOG_FILE
         self.__LOGGER = logging.getLogger(__name__)
         self.__LOGGER.setLevel(logging.INFO)
         HANDLER = logging.handlers.RotatingFileHandler(
-            log_file, maxBytes=20 * 1024 * 1024, backupCount=5)
+            LOG_FILE, maxBytes=20 * 1024 * 1024, backupCount=5)
         HANDLER.setLevel(logging.INFO)
         FORMATTER = logging.Formatter(
             '%(asctime)s.%(msecs)03d [%(process)s] %(levelname)s: - '
@@ -58,9 +68,10 @@ class LogOperation(object):
         :param message: Log message
         :return: None
         """
-        sort_url = ".." + self.__URL[-18:]
+        global REMOTE_URL, BRANCH
+        sort_url = ".." + REMOTE_URL[-18:]
         self.__LOGGER.info(sort_url
-                           + "[" + self.__BRANCH + "]"
+                           + "[" + BRANCH + "]"
                            + ", " + message)
 
     def log_output(self, section, message):
@@ -79,9 +90,8 @@ class ConfigParse(object):
     """
     Config Parser Class
     """
-    global CONF_FILE
 
-    def __init__(self, dir, url, branch, log_object):
+    def __init__(self, log_object):
         """
         First initialization
         :param dir: Git directory
@@ -89,11 +99,27 @@ class ConfigParse(object):
         :param branch: branch
         :param log_object: created log object
         """
+        global CONF_FILE, DIR_NAME, REMOTE_URL, BRANCH, LOG_FILE
         self.__config_db = ConfigObj(CONF_FILE)
-        self.__branch = branch
-        self.__url = url
-        self.__dir = dir
+        self.__branch = BRANCH
+        self.__url = REMOTE_URL
+        self.__dir = DIR_NAME
         self.__log_object = log_object
+
+    def read_map(self):
+        """
+        Create all config
+        :return:
+        """
+        return_map = list()
+        for git_url, value in self.__config_db.iteritems():
+            temp_dict = dict()
+            temp_dict["url"] = git_url
+            temp_dict["branch"] = value.keys()[0]
+            temp_dict["dir"] = value.get(value.keys()[0]).keys()[0]
+            return_map.append(temp_dict)
+        return return_map
+
 
     def get_maps(self):
         """
@@ -160,25 +186,26 @@ class Giter(object):
     """
     __is_new = False
 
-    def __init__(self, dir, url, branch):
+    def __init__(self):
         """
         First initialization
         :param dir: Git directory
         :param url: Git remote url
         :param branch: Branch
         """
+        global DIR_NAME, REMOTE_URL, BRANCH
         self.__current_commit = ""
-        if os.path.isdir(dir):
-            self.__branch = branch
-            self.__url = url
-            self.__dir = dir
-            self.__repository = git.Repo(dir)
+        if os.path.isdir(DIR_NAME):
+            self.__branch = BRANCH
+            self.__url = REMOTE_URL
+            self.__dir = DIR_NAME
+            self.__repository = git.Repo(DIR_NAME)
         else:
-            os.mkdir(dir)
-            self.__repository = git.Repo.init(dir)
-            self.__repository.create_remote('origin', url).fetch()
-            self.__repository.remote().pull(branch)
-            self.__repository.git.checkout(branch)
+            os.mkdir(DIR_NAME)
+            self.__repository = git.Repo.init(DIR_NAME)
+            self.__repository.create_remote('origin', REMOTE_URL).fetch()
+            self.__repository.remote().pull(BRANCH)
+            self.__repository.git.checkout(BRANCH)
             self.__is_new = True
 
     def get_last_commit(self):
@@ -216,6 +243,7 @@ class RunCommand(object):
     """
     Command Run Class
     """
+
     def __init__(self, log_object):
         """
         First initialization
