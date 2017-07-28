@@ -128,7 +128,7 @@ class ConfigParse(object):
         """
         return_map = dict()
         try:
-            for key, value in self.__config_db[self.__url][self.__branch].iteritems():
+            for key, value in self.__config_db[self.__url][self.__branch][self.__dir].iteritems():
                 return_map[key] = value
             return return_map
         except Exception as e:
@@ -214,9 +214,8 @@ class Giter(object):
         :return: String
         """
         if not self.__is_new:
-            self.__current_commit = \
-                str(list(self.__repository.iter_commits(
-                    'master'))[0])
+            sha = self.__repository.head.object.hexsha
+            self.__current_commit = str(self.__repository.rev_parse(sha))
         else:
             self.__current_commit = "NA"
         return self.__current_commit
