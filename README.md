@@ -6,6 +6,7 @@ Features :
   - Git branch change tracking
   - Executing specific commands on file and folder based (any and every) changes
   - Logging change and run attempt to file
+  - Multiple git repository usage
 
 Supported OS :
   - Linux
@@ -26,6 +27,7 @@ Supported OS :
 # Usage :
 # [git full http url]
 # [[git branch name]]
+# [[[git folder path]]]
 # ALL = "command", "command2", "command3", ... (Processes for All files)
 # file = "command", "command2", "command3", ... (Processes for Specific files)
 # folder/ ="command", "command2", "command3", ... (Processes for Specific files in directory)
@@ -46,8 +48,6 @@ map.cfg
 requirements.txt
 "
 ```
-# Restriction : 
-Currently one and only url and branch support. Resolved the future
 
 License
 ----
